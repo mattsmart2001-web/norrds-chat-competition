@@ -10,6 +10,11 @@ public class CPHInline
 {
     public bool Execute()
     {
+        // Guard: only process exact !enter messages (prevents bot response loop)
+        string rawInput = args.ContainsKey("rawInput") ? args["rawInput"].ToString().Trim().ToLower() : "";
+        if (!string.IsNullOrEmpty(rawInput) && rawInput != "!enter")
+            return false;
+
         string userId   = args.ContainsKey("userId")   ? args["userId"].ToString()   : "";
         string userName = args.ContainsKey("userName") ? args["userName"].ToString() : "Unknown";
         string avatar   = args.ContainsKey("userProfileUrl") ? args["userProfileUrl"].ToString() : "";
