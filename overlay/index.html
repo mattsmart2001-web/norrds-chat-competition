@@ -367,11 +367,17 @@
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
+        // Handle Streamer.bot broadcast (wrapped format)
         if (msg?.data?.name === 'DrawUpdate') {
           const payload = JSON.parse(msg.data.data);
           handleUpdate(payload);
+          return;
         }
-      } catch (e) {}
+        // Handle direct broadcast (raw format fallback)
+        if (msg?.type && (msg.type === 'new_entry' || msg.type === 'full_sync' || msg.type === 'reset')) {
+          handleUpdate(msg);
+        }
+      } catch (e) { console.error('[Draw] WS parse error:', e, event.data); }
     };
   }
 

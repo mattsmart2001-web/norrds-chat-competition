@@ -349,22 +349,28 @@
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
+        let payload = null;
+        // Wrapped format
         if (msg?.data?.name === 'DrawUpdate') {
-          const payload = JSON.parse(msg.data.data);
-          if (payload.type === 'full_sync' || payload.type === 'new_entry') {
-            allEntries = payload.entries || allEntries;
-            if (payload.type === 'full_sync') {
-              document.getElementById('footerInfo').textContent =
-                `${allEntries.length} entries in the draw`;
-            }
-          } else if (payload.type === 'winner_picked') {
-            revealWinner(payload.winner);
-          } else if (payload.type === 'reset') {
-            allEntries = [];
-            resetDisplay();
-          }
+          payload = JSON.parse(msg.data.data);
         }
-      } catch (e) {}
+        // Raw format fallback
+        else if (msg?.type && (msg.type === 'new_entry' || msg.type === 'full_sync' || msg.type === 'reset' || msg.type === 'winner_picked')) {
+          payload = msg;
+        }
+        if (!payload) return;
+
+        if (payload.type === 'full_sync' || payload.type === 'new_entry') {
+          allEntries = payload.entries || allEntries;
+          document.getElementById('footerInfo').textContent =
+            `${allEntries.length} entries in the draw`;
+        } else if (payload.type === 'winner_picked') {
+          revealWinner(payload.winner);
+        } else if (payload.type === 'reset') {
+          allEntries = [];
+          resetDisplay();
+        }
+      } catch (e) { console.error('[Draw] WS parse error:', e); }
     };
   }
 

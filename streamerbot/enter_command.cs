@@ -47,7 +47,7 @@ public class CPHInline
         entries.Add(entry);
         CPH.SetGlobalVar("draw_entries", JsonConvert.SerializeObject(entries), true);
 
-        // Broadcast to overlays
+        // Broadcast to overlays — send payload directly as a raw JSON string
         var payload = new
         {
             type         = "new_entry",
@@ -55,12 +55,9 @@ public class CPHInline
             entries      = entries,
             totalEntries = entries.Count
         };
-        CPH.WebsocketBroadcastString(
-            JsonConvert.SerializeObject(new {
-                @event = new { source = "General", type = "Custom" },
-                data   = new { name = "DrawUpdate", data = JsonConvert.SerializeObject(payload) }
-            })
-        );
+        string broadcastJson = JsonConvert.SerializeObject(payload);
+        CPH.WebsocketBroadcastString(broadcastJson);
+        CPH.LogInfo($"[Draw] Broadcast: {broadcastJson}");
 
         CPH.SendYouTubeMessage(
             $"@{userName} you're entered! 🎉 ({entries.Count} total entries) | Type !enter to join the 24H Race Draw!");

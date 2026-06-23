@@ -21,12 +21,7 @@ public class CPHInline
             totalEntries = entries.Count
         };
 
-        CPH.WebsocketBroadcastString(
-            JsonConvert.SerializeObject(new {
-                @event = new { source = "General", type = "Custom" },
-                data   = new { name = "DrawUpdate", data = JsonConvert.SerializeObject(payload) }
-            })
-        );
+        CPH.WebsocketBroadcastString(JsonConvert.SerializeObject(payload));
 
         CPH.LogInfo($"[Draw] Synced {entries.Count} entries to overlays.");
         return true;
