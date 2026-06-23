@@ -347,35 +347,51 @@
     ws = new WebSocket(WS_URL);
 
     ws.onopen = () => {
+      console.log('[Draw] WebSocket connected to', WS_URL);
       setStatus(true);
-      // No subscription needed — we listen for raw broadcast messages
+      // Subscribe so Streamer.bot recognises this client
+      ws.send(JSON.stringify({
+        request: 'Subscribe',
+        id: 'draw-overlay',
+        events: { General: ['Custom'] }
+      }));
     };
 
-    ws.onclose = () => {
+    ws.onclose = (e) => {
+      console.log('[Draw] WebSocket closed', e.code, e.reason);
       setStatus(false);
       setTimeout(connect, 3000);
     };
 
-    ws.onerror = () => {
+    ws.onerror = (e) => {
+      console.error('[Draw] WebSocket error', e);
       setStatus(false);
     };
 
     ws.onmessage = (event) => {
+      // Log every raw message so we can see what Streamer.bot actually sends
+      console.log('[Draw] Raw message:', event.data);
       try {
         const msg = JSON.parse(event.data);
         let payload = null;
 
         // Format 1: Streamer.bot broadcast envelope {event:{type:"Broadcast"}, data:{message:"..."}}
         if (msg?.event?.type === 'Broadcast' && msg?.data?.message) {
+          console.log('[Draw] Broadcast envelope detected');
           payload = JSON.parse(msg.data.message);
         }
         // Format 2: raw JSON {type:"new_entry",...}
         else if (msg?.type) {
+          console.log('[Draw] Raw payload detected, type:', msg.type);
           payload = msg;
         }
         // Format 3: old wrapped format {data:{name:"DrawUpdate", data:"..."}}
         else if (msg?.data?.name === 'DrawUpdate') {
+          console.log('[Draw] DrawUpdate envelope detected');
           payload = JSON.parse(msg.data.data);
+        }
+        else {
+          console.log('[Draw] Unrecognised message format:', JSON.stringify(msg).slice(0, 200));
         }
 
         if (payload) handleUpdate(payload);
