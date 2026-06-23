@@ -316,59 +316,27 @@
 </div>
 
 <script>
-  const WS_URL = 'ws://localhost:8080/';  // Streamer.bot built-in WebSocket server
+  const DATA_FILE = './draw_data.json';
   let allEntries = [];
-  let ws = null;
   let rolling = false;
   let rollInterval = null;
 
-  // Show overlay immediately in winner page (it's a dedicated scene source)
   document.getElementById('winnerOverlay').classList.add('visible');
 
-  function connect() {
-    ws = new WebSocket(WS_URL);
-
-    ws.onopen = () => {
+  async function pollEntries() {
+    try {
+      const res = await fetch(DATA_FILE + '?t=' + Date.now());
+      if (!res.ok) { setStatus(false); return; }
+      const data = await res.json();
+      allEntries = data.entries || [];
+      document.getElementById('footerInfo').textContent =
+        `${allEntries.length} entries in the draw`;
       setStatus(true);
-      // No subscription needed — we listen for raw broadcast messages
-    };
-
-    ws.onclose = () => { setStatus(false); setTimeout(connect, 3000); };
-    ws.onerror = () => setStatus(false);
-
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        let payload = null;
-
-        // Format 1: Streamer.bot broadcast envelope {event:{type:"Broadcast"}, data:{message:"..."}}
-        if (msg?.event?.type === 'Broadcast' && msg?.data?.message) {
-          payload = JSON.parse(msg.data.message);
-        }
-        // Format 2: raw JSON {type:"..."}
-        else if (msg?.type) {
-          payload = msg;
-        }
-        // Format 3: old wrapped format
-        else if (msg?.data?.name === 'DrawUpdate') {
-          payload = JSON.parse(msg.data.data);
-        }
-
-        if (!payload) return;
-
-        if (payload.type === 'full_sync' || payload.type === 'new_entry') {
-          allEntries = payload.entries || allEntries;
-          document.getElementById('footerInfo').textContent =
-            `${allEntries.length} entries in the draw`;
-        } else if (payload.type === 'winner_picked') {
-          revealWinner(payload.winner);
-        } else if (payload.type === 'reset') {
-          allEntries = [];
-          resetDisplay();
-        }
-      } catch (e) { console.error('[Draw] WS parse error:', e); }
-    };
+    } catch (e) { setStatus(false); }
   }
+
+  pollEntries();
+  setInterval(pollEntries, 3000);
 
   function startPick() {
     if (rolling) return;
@@ -477,7 +445,6 @@
     document.getElementById('statusText').textContent = connected ? 'Connected' : 'Reconnecting…';
   }
 
-  connect();
 </script>
 </body>
 </html>

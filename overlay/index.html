@@ -337,105 +337,34 @@
 
 <script>
   const MAX_VISIBLE = 8;
-  const WS_URL = 'ws://localhost:8080/';
+  const DATA_FILE = './draw_data.json';
+  const POLL_MS = 2000;
 
-  let entries = [];
-  let totalCount = 0;
-  let ws = null;
-  let pollTimer = null;
-  let lastEntryCount = -1;
+  let lastCount = -1;
 
-  function connect() {
-    ws = new WebSocket(WS_URL);
-
-    ws.onopen = () => {
+  async function poll() {
+    try {
+      const res = await fetch(DATA_FILE + '?t=' + Date.now());
+      if (!res.ok) { setStatus(false); return; }
+      const data = await res.json();
       setStatus(true);
-      pollEntries(); // immediate fetch on connect
-      pollTimer = setInterval(pollEntries, 3000);
-    };
-
-    ws.onclose = () => {
+      if (data.totalEntries === lastCount) return;
+      lastCount = data.totalEntries;
+      document.getElementById('count').textContent = data.totalEntries;
+      const recent = (data.entries || []).slice(-MAX_VISIBLE).reverse();
+      renderAll(recent, data.totalEntries);
+    } catch (e) {
       setStatus(false);
-      clearInterval(pollTimer);
-      setTimeout(connect, 3000);
-    };
-
-    ws.onerror = () => setStatus(false);
-
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        // Handle GetGlobalVar response
-        if (msg?.id === 'draw-poll' && msg?.status === 'ok') {
-          const raw = msg.value;
-          if (!raw) return;
-          const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-          if (Array.isArray(parsed)) {
-            syncEntries(parsed);
-          }
-        }
-      } catch (e) {}
-    };
-  }
-
-  function pollEntries() {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({
-        request: 'GetGlobalVar',
-        id: 'draw-poll',
-        name: 'draw_entries',
-        persisted: true
-      }));
     }
   }
 
-  function syncEntries(allEntries) {
-    if (allEntries.length === lastEntryCount) return; // nothing changed
-    lastEntryCount = allEntries.length;
-    totalCount = allEntries.length;
-    document.getElementById('count').textContent = totalCount;
-    // Show most recent MAX_VISIBLE entries, newest first
-    entries = allEntries.slice(-MAX_VISIBLE).reverse();
-    renderAll();
-  }
-
-  function handleUpdate(payload) {
-    if (payload.type === 'new_entry') {
-      totalCount = payload.totalEntries;
-      document.getElementById('count').textContent = totalCount;
-      addEntry(payload.entry, true);
-    } else if (payload.type === 'full_sync') {
-      totalCount = payload.totalEntries;
-      document.getElementById('count').textContent = totalCount;
-      entries = payload.entries.slice(-MAX_VISIBLE);
-      renderAll();
-    } else if (payload.type === 'reset') {
-      totalCount = 0;
-      entries = [];
-      document.getElementById('count').textContent = '0';
-      renderAll();
-    }
-  }
-
-  function addEntry(entry, isNew) {
-    entries.unshift({ ...entry, isNew });
-    if (entries.length > MAX_VISIBLE) entries = entries.slice(0, MAX_VISIBLE);
-    renderAll();
-    // Remove 'new' highlight after animation
-    if (isNew) {
-      setTimeout(() => {
-        const el = document.querySelector('.entry-card.new-entry');
-        if (el) el.classList.remove('new-entry');
-      }, 3500);
-    }
-  }
-
-  function renderAll() {
+  function renderAll(entries, totalCount) {
     const list = document.getElementById('entriesList');
     list.innerHTML = '';
     entries.forEach((entry, i) => {
       const card = document.createElement('div');
-      card.className = 'entry-card' + (i === 0 && entry.isNew ? ' new-entry' : '');
+      const isNewest = i === 0;
+      card.className = 'entry-card' + (isNewest ? ' new-entry' : '');
 
       const avatarHtml = entry.userAvatar
         ? `<img class="avatar" src="${entry.userAvatar}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="avatar-initials" style="display:none">${initials(entry.userName)}</div>`
@@ -450,12 +379,11 @@
         <div class="entry-number">#${totalCount - i}</div>
       `;
       list.appendChild(card);
+      if (isNewest) setTimeout(() => card.classList.remove('new-entry'), 3500);
     });
   }
 
-  function initials(name) {
-    return (name || '?').slice(0, 2).toUpperCase();
-  }
+  function initials(n) { return (n || '?').slice(0, 2).toUpperCase(); }
 
   function escHtml(str) {
     const d = document.createElement('div');
@@ -464,19 +392,17 @@
   }
 
   function formatTime(ts) {
-    if (!ts) return '';
-    try {
-      const d = new Date(ts);
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch { return ''; }
+    try { return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+    catch { return ''; }
   }
 
-  function setStatus(connected) {
-    document.getElementById('statusDot').className = 'status-dot' + (connected ? '' : ' disconnected');
-    document.getElementById('statusText').textContent = connected ? 'Draw Live' : 'Reconnecting…';
+  function setStatus(ok) {
+    document.getElementById('statusDot').className = 'status-dot' + (ok ? '' : ' disconnected');
+    document.getElementById('statusText').textContent = ok ? 'Draw Live' : 'Waiting for data…';
   }
 
-  connect();
+  poll();
+  setInterval(poll, POLL_MS);
 </script>
 </body>
 </html>

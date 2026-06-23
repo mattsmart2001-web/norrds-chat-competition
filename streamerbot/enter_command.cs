@@ -1,17 +1,19 @@
 // Streamer.bot Action: "Draw - Enter"
-// Trigger: YouTube Chat Message Command — !enter
-// Sub-action: Execute C# Code → paste this entire file
+// Trigger: YouTube > Chat > Message (no criteria — guard handles filtering)
 
 using System;
+using System.IO;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
 public class CPHInline
 {
+    // !! SET THIS to the full path of your overlay folder (where index.html lives)
+    const string OVERLAY_DIR = @"D:\chatcomp\norrds-chat-competition-claude-epic-shannon-8qkyob\overlay";
+
     public bool Execute()
     {
-        // Guard: only process exact !enter messages (prevents bot response loop)
-        // Core>Commands uses "rawInput"; YouTube>Chat uses "message"
+        // Guard: only process exact !enter messages
         string msgText = "";
         if (args.ContainsKey("rawInput")) msgText = args["rawInput"].ToString().Trim().ToLower();
         else if (args.ContainsKey("message")) msgText = args["message"].ToString().Trim().ToLower();
@@ -28,13 +30,11 @@ public class CPHInline
             return false;
         }
 
-        // Load existing entries (persisted across stream restarts)
         string json = CPH.GetGlobalVar<string>("draw_entries", true);
         var entries = string.IsNullOrEmpty(json)
             ? new List<Dictionary<string, string>>()
             : JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(json);
 
-        // Deduplicate
         bool alreadyEntered = entries.Exists(e =>
             e.ContainsKey("userId") && e["userId"] == userId);
 
@@ -44,33 +44,37 @@ public class CPHInline
             return true;
         }
 
-        // Add entry
         var entry = new Dictionary<string, string>
         {
-            { "userId",      userId },
-            { "userName",    userName },
-            { "userAvatar",  avatar },
-            { "timestamp",   DateTime.UtcNow.ToString("o") }
+            { "userId",     userId },
+            { "userName",   userName },
+            { "userAvatar", avatar },
+            { "timestamp",  DateTime.UtcNow.ToString("o") }
         };
         entries.Add(entry);
         CPH.SetGlobalVar("draw_entries", JsonConvert.SerializeObject(entries), true);
 
-        // Broadcast to overlays — send payload directly as a raw JSON string
-        var payload = new
-        {
-            type         = "new_entry",
-            entry        = entry,
-            entries      = entries,
-            totalEntries = entries.Count
-        };
-        string broadcastJson = JsonConvert.SerializeObject(payload);
-        CPH.WebsocketBroadcastString(broadcastJson);
-        CPH.LogInfo($"[Draw] Broadcast: {broadcastJson}");
+        WriteDataFile(entries);
 
         CPH.SendYouTubeMessage(
             $"@{userName} you're entered! 🎉 ({entries.Count} total entries) | Type !enter to join the 24H Race Draw!");
 
         CPH.LogInfo($"[Draw] {userName} entered. Total: {entries.Count}");
         return true;
+    }
+
+    void WriteDataFile(List<Dictionary<string, string>> entries)
+    {
+        try
+        {
+            var data = new { totalEntries = entries.Count, entries = entries };
+            string path = Path.Combine(OVERLAY_DIR, "draw_data.json");
+            File.WriteAllText(path, JsonConvert.SerializeObject(data));
+            CPH.LogInfo($"[Draw] Wrote draw_data.json ({entries.Count} entries)");
+        }
+        catch (Exception ex)
+        {
+            CPH.LogError($"[Draw] Failed to write draw_data.json: {ex.Message}");
+        }
     }
 }
