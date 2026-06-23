@@ -11,8 +11,11 @@ public class CPHInline
     public bool Execute()
     {
         // Guard: only process exact !enter messages (prevents bot response loop)
-        string rawInput = args.ContainsKey("rawInput") ? args["rawInput"].ToString().Trim().ToLower() : "";
-        if (!string.IsNullOrEmpty(rawInput) && rawInput != "!enter")
+        // Core>Commands uses "rawInput"; YouTube>Chat uses "message"
+        string msgText = "";
+        if (args.ContainsKey("rawInput")) msgText = args["rawInput"].ToString().Trim().ToLower();
+        else if (args.ContainsKey("message")) msgText = args["message"].ToString().Trim().ToLower();
+        if (!string.IsNullOrEmpty(msgText) && msgText != "!enter")
             return false;
 
         string userId   = args.ContainsKey("userId")   ? args["userId"].ToString()   : "";
