@@ -316,7 +316,7 @@
 </div>
 
 <script>
-  const WS_URL = 'ws://localhost:8080/';
+  const WS_URL = 'ws://localhost:8181/';  // Custom WebSocket server in Streamer.bot
   let allEntries = [];
   let ws = null;
   let rolling = false;
@@ -330,17 +330,7 @@
 
     ws.onopen = () => {
       setStatus(true);
-      ws.send(JSON.stringify({
-        request: 'Subscribe',
-        id: 'winner-overlay',
-        events: { General: ['Custom'] }
-      }));
-      // Request full sync on connect
-      ws.send(JSON.stringify({
-        request: 'DoAction',
-        id: 'sync-req',
-        action: { name: 'Draw - Sync Entries' }
-      }));
+      ws.send(JSON.stringify({ type: 'sync_request' }));
     };
 
     ws.onclose = () => { setStatus(false); setTimeout(connect, 3000); };
@@ -410,13 +400,12 @@
         rollerName.classList.remove('rolling');
         revealWinner(winner);
 
-        // Broadcast winner via Streamer.bot action
+        // Tell Streamer.bot to announce the winner in chat
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
-            request: 'DoAction',
-            id: 'pick-winner',
-            action: { name: 'Draw - Announce Winner' },
-            args: { winnerName: winner.userName, winnerId: winner.userId }
+            type: 'announce_winner',
+            winnerName: winner.userName,
+            winnerId: winner.userId
           }));
         }
       }

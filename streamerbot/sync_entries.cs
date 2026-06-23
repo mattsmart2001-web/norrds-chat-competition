@@ -1,6 +1,8 @@
 // Streamer.bot Action: "Draw - Sync Entries"
-// Trigger: Called automatically when an overlay connects (via DoAction from the overlay JS)
-// Also wire this to a hotkey if you want to manually force a sync.
+// Triggers:
+//   1. WebSocket Server > Message — fires when overlay sends {"type":"sync_request"}
+//      (Set trigger criteria: message contains "sync_request")
+//   2. Hotkey — e.g. Ctrl+Shift+S for manual sync
 
 using System.Collections.Generic;
 using Newtonsoft.Json;
@@ -22,7 +24,6 @@ public class CPHInline
         };
 
         CPH.WebsocketBroadcastString(JsonConvert.SerializeObject(payload));
-
         CPH.LogInfo($"[Draw] Synced {entries.Count} entries to overlays.");
         return true;
     }
