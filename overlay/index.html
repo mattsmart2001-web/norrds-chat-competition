@@ -337,66 +337,66 @@
 
 <script>
   const MAX_VISIBLE = 8;
-  const WS_URL = 'ws://localhost:8080/';  // Streamer.bot built-in WebSocket server
+  const WS_URL = 'ws://localhost:8080/';
 
   let entries = [];
   let totalCount = 0;
   let ws = null;
+  let pollTimer = null;
+  let lastEntryCount = -1;
 
   function connect() {
     ws = new WebSocket(WS_URL);
 
     ws.onopen = () => {
-      console.log('[Draw] WebSocket connected to', WS_URL);
       setStatus(true);
-      // Subscribe so Streamer.bot recognises this client
-      ws.send(JSON.stringify({
-        request: 'Subscribe',
-        id: 'draw-overlay',
-        events: { General: ['Custom'] }
-      }));
+      pollEntries(); // immediate fetch on connect
+      pollTimer = setInterval(pollEntries, 3000);
     };
 
-    ws.onclose = (e) => {
-      console.log('[Draw] WebSocket closed', e.code, e.reason);
+    ws.onclose = () => {
       setStatus(false);
+      clearInterval(pollTimer);
       setTimeout(connect, 3000);
     };
 
-    ws.onerror = (e) => {
-      console.error('[Draw] WebSocket error', e);
-      setStatus(false);
-    };
+    ws.onerror = () => setStatus(false);
 
     ws.onmessage = (event) => {
-      // Log every raw message so we can see what Streamer.bot actually sends
-      console.log('[Draw] Raw message:', event.data);
       try {
         const msg = JSON.parse(event.data);
-        let payload = null;
-
-        // Format 1: Streamer.bot broadcast envelope {event:{type:"Broadcast"}, data:{message:"..."}}
-        if (msg?.event?.type === 'Broadcast' && msg?.data?.message) {
-          console.log('[Draw] Broadcast envelope detected');
-          payload = JSON.parse(msg.data.message);
+        // Handle GetGlobalVar response
+        if (msg?.id === 'draw-poll' && msg?.status === 'ok') {
+          const raw = msg.value;
+          if (!raw) return;
+          const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          if (Array.isArray(parsed)) {
+            syncEntries(parsed);
+          }
         }
-        // Format 2: raw JSON {type:"new_entry",...}
-        else if (msg?.type) {
-          console.log('[Draw] Raw payload detected, type:', msg.type);
-          payload = msg;
-        }
-        // Format 3: old wrapped format {data:{name:"DrawUpdate", data:"..."}}
-        else if (msg?.data?.name === 'DrawUpdate') {
-          console.log('[Draw] DrawUpdate envelope detected');
-          payload = JSON.parse(msg.data.data);
-        }
-        else {
-          console.log('[Draw] Unrecognised message format:', JSON.stringify(msg).slice(0, 200));
-        }
-
-        if (payload) handleUpdate(payload);
-      } catch (e) { console.error('[Draw] WS parse error:', e, event.data); }
+      } catch (e) {}
     };
+  }
+
+  function pollEntries() {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        request: 'GetGlobalVar',
+        id: 'draw-poll',
+        name: 'draw_entries',
+        persisted: true
+      }));
+    }
+  }
+
+  function syncEntries(allEntries) {
+    if (allEntries.length === lastEntryCount) return; // nothing changed
+    lastEntryCount = allEntries.length;
+    totalCount = allEntries.length;
+    document.getElementById('count').textContent = totalCount;
+    // Show most recent MAX_VISIBLE entries, newest first
+    entries = allEntries.slice(-MAX_VISIBLE).reverse();
+    renderAll();
   }
 
   function handleUpdate(payload) {
