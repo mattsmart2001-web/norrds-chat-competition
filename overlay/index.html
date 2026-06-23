@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Race Draw Overlay</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: transparent;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    width: 420px;
+    overflow: hidden;
+  }
+
+  .widget {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg, #0d0d0d 0%, #1a1a2e 100%);
+    border: 1px solid #e8000d;
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 0 20px rgba(232, 0, 13, 0.3);
+  }
+
+  .header-left {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .header-title {
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+
+  .header-subtitle {
+    color: #e8000d;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 3px;
+  }
+
+  .entry-count-badge {
+    background: #e8000d;
+    color: #fff;
+    border-radius: 8px;
+    padding: 6px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 64px;
+  }
+
+  .count-number {
+    font-size: 24px;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .count-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.85;
+  }
+
+  /* ── Prize Info ── */
+  .prize-panel {
+    background: linear-gradient(135deg, #0d0d0d 0%, #1a1a2e 100%);
+    border: 1px solid #333;
+    border-left: 3px solid #e8000d;
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+
+  .prize-title {
+    color: #e8000d;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+
+  .prize-item {
+    color: #ddd;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 3px;
+  }
+
+  .prize-item::before {
+    content: '🏆';
+    font-size: 11px;
+  }
+
+  .how-to-enter {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #222;
+    color: #aaa;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .cmd {
+    background: #e8000d;
+    color: #fff;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── Entry Feed ── */
+  .feed-header {
+    color: #777;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding: 0 4px;
+  }
+
+  .entries-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .entry-card {
+    background: linear-gradient(135deg, #0d0d0d 0%, #1a1a2e 100%);
+    border: 1px solid #222;
+    border-radius: 8px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: slideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .entry-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: #e8000d;
+    border-radius: 3px 0 0 3px;
+  }
+
+  .entry-card.new-entry {
+    border-color: #e8000d;
+    box-shadow: 0 0 12px rgba(232, 0, 13, 0.25);
+  }
+
+  .entry-card.new-entry::after {
+    content: 'NEW';
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #e8000d;
+    color: #fff;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 2px 5px;
+    border-radius: 3px;
+    animation: fadeOutNew 2s 1.5s forwards;
+  }
+
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid #333;
+    flex-shrink: 0;
+    object-fit: cover;
+    background: #1a1a2e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .avatar-initials {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid #333;
+    flex-shrink: 0;
+    background: #1a1a2e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #e8000d;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .entry-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .entry-name {
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .entry-time {
+    color: #555;
+    font-size: 10px;
+    margin-top: 1px;
+  }
+
+  .entry-number {
+    color: #444;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  /* ── Status ── */
+  .status-bar {
+    background: #0d0d0d;
+    border: 1px solid #1a1a1a;
+    border-radius: 6px;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #22c55e;
+    animation: pulse 2s infinite;
+    flex-shrink: 0;
+  }
+
+  .status-dot.disconnected {
+    background: #e8000d;
+    animation: none;
+  }
+
+  .status-text {
+    color: #555;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-20px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes fadeOutNew {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+</style>
+</head>
+<body>
+<div class="widget">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="header-title">24H Race Draw</div>
+      <div class="header-subtitle">Live Entries</div>
+    </div>
+    <div class="entry-count-badge">
+      <span class="count-number" id="count">0</span>
+      <span class="count-label">Entered</span>
+    </div>
+  </div>
+
+  <!-- Prize & How To Enter -->
+  <div class="prize-panel">
+    <div class="prize-title">Prizes</div>
+    <div class="prize-item">10% SimLab Voucher</div>
+    <div class="prize-item">SparksTheory Hoodie</div>
+    <div class="how-to-enter">
+      Type <span class="cmd">!enter</span> in chat to be entered into the draw!
+    </div>
+  </div>
+
+  <!-- Recent entries -->
+  <div class="feed-header">Recent Entries</div>
+  <div class="entries-list" id="entriesList">
+    <!-- populated by JS -->
+  </div>
+
+  <!-- Connection status -->
+  <div class="status-bar">
+    <div class="status-dot disconnected" id="statusDot"></div>
+    <div class="status-text" id="statusText">Connecting…</div>
+  </div>
+
+</div>
+
+<script>
+  const MAX_VISIBLE = 8;
+  const WS_URL = 'ws://localhost:8080/';
+
+  let entries = [];
+  let totalCount = 0;
+  let ws = null;
+
+  function connect() {
+    ws = new WebSocket(WS_URL);
+
+    ws.onopen = () => {
+      setStatus(true);
+      ws.send(JSON.stringify({
+        request: 'Subscribe',
+        id: 'draw-overlay',
+        events: { General: ['Custom'] }
+      }));
+    };
+
+    ws.onclose = () => {
+      setStatus(false);
+      setTimeout(connect, 3000);
+    };
+
+    ws.onerror = () => {
+      setStatus(false);
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg?.data?.name === 'DrawUpdate') {
+          const payload = JSON.parse(msg.data.data);
+          handleUpdate(payload);
+        }
+      } catch (e) {}
+    };
+  }
+
+  function handleUpdate(payload) {
+    if (payload.type === 'new_entry') {
+      totalCount = payload.totalEntries;
+      document.getElementById('count').textContent = totalCount;
+      addEntry(payload.entry, true);
+    } else if (payload.type === 'full_sync') {
+      totalCount = payload.totalEntries;
+      document.getElementById('count').textContent = totalCount;
+      entries = payload.entries.slice(-MAX_VISIBLE);
+      renderAll();
+    } else if (payload.type === 'reset') {
+      totalCount = 0;
+      entries = [];
+      document.getElementById('count').textContent = '0';
+      renderAll();
+    }
+  }
+
+  function addEntry(entry, isNew) {
+    entries.unshift({ ...entry, isNew });
+    if (entries.length > MAX_VISIBLE) entries = entries.slice(0, MAX_VISIBLE);
+    renderAll();
+    // Remove 'new' highlight after animation
+    if (isNew) {
+      setTimeout(() => {
+        const el = document.querySelector('.entry-card.new-entry');
+        if (el) el.classList.remove('new-entry');
+      }, 3500);
+    }
+  }
+
+  function renderAll() {
+    const list = document.getElementById('entriesList');
+    list.innerHTML = '';
+    entries.forEach((entry, i) => {
+      const card = document.createElement('div');
+      card.className = 'entry-card' + (i === 0 && entry.isNew ? ' new-entry' : '');
+
+      const avatarHtml = entry.userAvatar
+        ? `<img class="avatar" src="${entry.userAvatar}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="avatar-initials" style="display:none">${initials(entry.userName)}</div>`
+        : `<div class="avatar-initials">${initials(entry.userName)}</div>`;
+
+      card.innerHTML = `
+        ${avatarHtml}
+        <div class="entry-info">
+          <div class="entry-name">${escHtml(entry.userName)}</div>
+          <div class="entry-time">${formatTime(entry.timestamp)}</div>
+        </div>
+        <div class="entry-number">#${totalCount - i}</div>
+      `;
+      list.appendChild(card);
+    });
+  }
+
+  function initials(name) {
+    return (name || '?').slice(0, 2).toUpperCase();
+  }
+
+  function escHtml(str) {
+    const d = document.createElement('div');
+    d.appendChild(document.createTextNode(str || ''));
+    return d.innerHTML;
+  }
+
+  function formatTime(ts) {
+    if (!ts) return '';
+    try {
+      const d = new Date(ts);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch { return ''; }
+  }
+
+  function setStatus(connected) {
+    document.getElementById('statusDot').className = 'status-dot' + (connected ? '' : ' disconnected');
+    document.getElementById('statusText').textContent = connected ? 'Draw Live' : 'Reconnecting…';
+  }
+
+  connect();
+</script>
+</body>
+</html>

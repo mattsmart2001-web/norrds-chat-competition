@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Winner Picker</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: transparent;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    width: 600px;
+    min-height: 340px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  /* ── Idle state (not visible in OBS until triggered) ── */
+  .winner-overlay {
+    width: 100%;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: none;
+  }
+
+  .winner-overlay.visible {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: all;
+  }
+
+  /* ── Rolling / picker state ── */
+  .picker-panel {
+    background: linear-gradient(160deg, #0d0d0d 0%, #1a1a2e 100%);
+    border: 2px solid #e8000d;
+    border-radius: 16px;
+    padding: 28px 32px;
+    text-align: center;
+    box-shadow: 0 0 60px rgba(232, 0, 13, 0.4), 0 0 120px rgba(232, 0, 13, 0.15);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Decorative scan line */
+  .picker-panel::before {
+    content: '';
+    position: absolute;
+    left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #e8000d, transparent);
+    animation: scan 2.5s linear infinite;
+  }
+
+  .draw-label {
+    color: #e8000d;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 18px;
+  }
+
+  /* Rolling name display */
+  .roller-container {
+    position: relative;
+    height: 72px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  .roller-name {
+    color: #fff;
+    font-size: 38px;
+    font-weight: 900;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 72px;
+    animation: none;
+  }
+
+  .roller-name.rolling {
+    animation: roll 0.08s linear infinite;
+  }
+
+  /* Winner reveal state */
+  .winner-reveal {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .winner-reveal.show {
+    display: flex;
+  }
+
+  .winner-avatar-wrap {
+    position: relative;
+  }
+
+  .winner-avatar {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    border: 4px solid #e8000d;
+    object-fit: cover;
+    box-shadow: 0 0 30px rgba(232, 0, 13, 0.6);
+    background: #1a1a2e;
+  }
+
+  .winner-avatar-initials {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    border: 4px solid #e8000d;
+    background: #1a1a2e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #e8000d;
+    font-size: 32px;
+    font-weight: 900;
+    box-shadow: 0 0 30px rgba(232, 0, 13, 0.6);
+  }
+
+  .winner-name {
+    color: #fff;
+    font-size: 36px;
+    font-weight: 900;
+    text-shadow: 0 0 20px rgba(232, 0, 13, 0.8);
+    animation: winnerPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  .winner-tag {
+    color: #e8000d;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    animation: winnerPop 0.6s 0.1s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  .prizes-won {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    animation: winnerPop 0.6s 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  .prize-pill {
+    background: rgba(232, 0, 13, 0.15);
+    border: 1px solid #e8000d;
+    color: #fff;
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* Footer info */
+  .footer-info {
+    margin-top: 16px;
+    color: #444;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
+
+  /* Controls (only shown in preview mode — hide in OBS) */
+  .controls {
+    margin-top: 16px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 10px 24px;
+    border-radius: 8px;
+    border: none;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-pick {
+    background: #e8000d;
+    color: #fff;
+    box-shadow: 0 0 20px rgba(232, 0, 13, 0.4);
+  }
+
+  .btn-pick:hover { background: #ff1a1a; transform: scale(1.04); }
+  .btn-pick:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .btn-reset {
+    background: #222;
+    color: #888;
+    border: 1px solid #333;
+  }
+  .btn-reset:hover { background: #333; color: #aaa; }
+
+  /* Status bar */
+  .status-bar {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #22c55e;
+    animation: pulse 2s infinite;
+  }
+
+  .status-dot.disconnected { background: #e8000d; animation: none; }
+
+  .status-text { color: #555; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+
+  @keyframes scan {
+    0%   { top: -2px; }
+    100% { top: 102%; }
+  }
+
+  @keyframes roll {
+    0%   { opacity: 1; }
+    49%  { opacity: 0; }
+    50%  { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  @keyframes winnerPop {
+    from { opacity: 0; transform: scale(0.6); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+
+  /* Confetti particles */
+  .confetti-wrap {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .confetti-particle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    animation: confettiFall linear forwards;
+  }
+
+  @keyframes confettiFall {
+    0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(360px) rotate(720deg); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="winner-overlay" id="winnerOverlay">
+  <div class="picker-panel">
+    <div class="confetti-wrap" id="confettiWrap"></div>
+
+    <div class="draw-label">🏁 24H Race Draw — Winner</div>
+
+    <!-- Rolling display (shown while picking) -->
+    <div id="rollerSection">
+      <div class="roller-container">
+        <div class="roller-name" id="rollerName">Waiting…</div>
+      </div>
+    </div>
+
+    <!-- Winner reveal (shown after pick) -->
+    <div class="winner-reveal" id="winnerReveal">
+      <div id="winnerAvatarWrap"></div>
+      <div class="winner-tag">🎉 Winner! 🎉</div>
+      <div class="winner-name" id="winnerName"></div>
+      <div class="prizes-won">
+        <div class="prize-pill">10% SimLab Voucher</div>
+        <div class="prize-pill">SparksTheory Hoodie</div>
+      </div>
+    </div>
+
+    <div class="footer-info" id="footerInfo">Ready to pick</div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <button class="btn btn-pick" id="btnPick" onclick="startPick()">🎲 Pick Winner</button>
+      <button class="btn btn-reset" id="btnReset" onclick="resetDisplay()">Reset Display</button>
+    </div>
+
+    <div class="status-bar">
+      <div class="status-dot disconnected" id="statusDot"></div>
+      <div class="status-text" id="statusText">Connecting…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const WS_URL = 'ws://localhost:8080/';
+  let allEntries = [];
+  let ws = null;
+  let rolling = false;
+  let rollInterval = null;
+
+  // Show overlay immediately in winner page (it's a dedicated scene source)
+  document.getElementById('winnerOverlay').classList.add('visible');
+
+  function connect() {
+    ws = new WebSocket(WS_URL);
+
+    ws.onopen = () => {
+      setStatus(true);
+      ws.send(JSON.stringify({
+        request: 'Subscribe',
+        id: 'winner-overlay',
+        events: { General: ['Custom'] }
+      }));
+      // Request full sync on connect
+      ws.send(JSON.stringify({
+        request: 'DoAction',
+        id: 'sync-req',
+        action: { name: 'Draw - Sync Entries' }
+      }));
+    };
+
+    ws.onclose = () => { setStatus(false); setTimeout(connect, 3000); };
+    ws.onerror = () => setStatus(false);
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg?.data?.name === 'DrawUpdate') {
+          const payload = JSON.parse(msg.data.data);
+          if (payload.type === 'full_sync' || payload.type === 'new_entry') {
+            allEntries = payload.entries || allEntries;
+            if (payload.type === 'full_sync') {
+              document.getElementById('footerInfo').textContent =
+                `${allEntries.length} entries in the draw`;
+            }
+          } else if (payload.type === 'winner_picked') {
+            revealWinner(payload.winner);
+          } else if (payload.type === 'reset') {
+            allEntries = [];
+            resetDisplay();
+          }
+        }
+      } catch (e) {}
+    };
+  }
+
+  function startPick() {
+    if (rolling) return;
+    if (allEntries.length === 0) {
+      alert('No entries yet!');
+      return;
+    }
+
+    rolling = true;
+    document.getElementById('btnPick').disabled = true;
+    document.getElementById('winnerReveal').classList.remove('show');
+    document.getElementById('rollerSection').style.display = '';
+
+    const rollerName = document.getElementById('rollerName');
+    rollerName.classList.add('rolling');
+
+    let speed = 60;
+    let elapsed = 0;
+    const duration = 4000;
+    const shuffled = [...allEntries].sort(() => Math.random() - 0.5);
+    let idx = 0;
+
+    rollInterval = setInterval(() => {
+      rollerName.textContent = shuffled[idx % shuffled.length].userName;
+      idx++;
+      elapsed += speed;
+
+      // Slow down near the end
+      if (elapsed > duration * 0.65) speed = 160;
+      if (elapsed > duration * 0.85) speed = 300;
+
+      if (elapsed >= duration) {
+        clearInterval(rollInterval);
+        const winner = shuffled[idx % shuffled.length];
+        rollerName.classList.remove('rolling');
+        revealWinner(winner);
+
+        // Broadcast winner via Streamer.bot action
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            request: 'DoAction',
+            id: 'pick-winner',
+            action: { name: 'Draw - Announce Winner' },
+            args: { winnerName: winner.userName, winnerId: winner.userId }
+          }));
+        }
+      }
+    }, speed);
+  }
+
+  function revealWinner(winner) {
+    rolling = false;
+    document.getElementById('rollerSection').style.display = 'none';
+    document.getElementById('btnPick').disabled = false;
+
+    const reveal = document.getElementById('winnerReveal');
+    reveal.classList.add('show');
+    document.getElementById('winnerName').textContent = winner.userName;
+
+    const avatarWrap = document.getElementById('winnerAvatarWrap');
+    if (winner.userAvatar) {
+      avatarWrap.innerHTML = `<img class="winner-avatar" src="${winner.userAvatar}" onerror="this.parentElement.innerHTML='<div class=\\'winner-avatar-initials\\'>${initials(winner.userName)}</div>'" alt="">`;
+    } else {
+      avatarWrap.innerHTML = `<div class="winner-avatar-initials">${initials(winner.userName)}</div>`;
+    }
+
+    document.getElementById('footerInfo').textContent =
+      `Winner from ${allEntries.length} entries`;
+
+    spawnConfetti();
+  }
+
+  function resetDisplay() {
+    rolling = false;
+    if (rollInterval) clearInterval(rollInterval);
+    document.getElementById('winnerReveal').classList.remove('show');
+    document.getElementById('rollerSection').style.display = '';
+    document.getElementById('rollerName').textContent = 'Waiting…';
+    document.getElementById('rollerName').classList.remove('rolling');
+    document.getElementById('btnPick').disabled = false;
+    document.getElementById('confettiWrap').innerHTML = '';
+    document.getElementById('footerInfo').textContent =
+      `${allEntries.length} entries in the draw`;
+  }
+
+  function spawnConfetti() {
+    const wrap = document.getElementById('confettiWrap');
+    wrap.innerHTML = '';
+    const colors = ['#e8000d', '#ff6b6b', '#fff', '#ffd700', '#00b4d8'];
+    for (let i = 0; i < 60; i++) {
+      const p = document.createElement('div');
+      p.className = 'confetti-particle';
+      p.style.left = Math.random() * 100 + '%';
+      p.style.background = colors[Math.floor(Math.random() * colors.length)];
+      p.style.animationDuration = (1.5 + Math.random() * 2) + 's';
+      p.style.animationDelay = (Math.random() * 1) + 's';
+      wrap.appendChild(p);
+    }
+  }
+
+  function initials(name) {
+    return (name || '?').slice(0, 2).toUpperCase();
+  }
+
+  function setStatus(connected) {
+    document.getElementById('statusDot').className = 'status-dot' + (connected ? '' : ' disconnected');
+    document.getElementById('statusText').textContent = connected ? 'Connected' : 'Reconnecting…';
+  }
+
+  connect();
+</script>
+</body>
+</html>
