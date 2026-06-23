@@ -23,7 +23,7 @@ public class CPHInline
             totalEntries = entries.Count
         };
 
-        CPH.WebsocketBroadcastString(JsonConvert.SerializeObject(payload));
+        CPH.WebsocketCustomServerBroadcast(JsonConvert.SerializeObject(payload), null, "Draw Overlay");
         CPH.LogInfo($"[Draw] Synced {entries.Count} entries to overlays.");
         return true;
     }
