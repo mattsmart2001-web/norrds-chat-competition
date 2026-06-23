@@ -363,16 +363,22 @@
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
-        // Handle Streamer.bot broadcast (wrapped format)
-        if (msg?.data?.name === 'DrawUpdate') {
-          const payload = JSON.parse(msg.data.data);
-          handleUpdate(payload);
-          return;
+        let payload = null;
+
+        // Format 1: Streamer.bot broadcast envelope {event:{type:"Broadcast"}, data:{message:"..."}}
+        if (msg?.event?.type === 'Broadcast' && msg?.data?.message) {
+          payload = JSON.parse(msg.data.message);
         }
-        // Handle direct broadcast (raw format fallback)
-        if (msg?.type && (msg.type === 'new_entry' || msg.type === 'full_sync' || msg.type === 'reset')) {
-          handleUpdate(msg);
+        // Format 2: raw JSON {type:"new_entry",...}
+        else if (msg?.type) {
+          payload = msg;
         }
+        // Format 3: old wrapped format {data:{name:"DrawUpdate", data:"..."}}
+        else if (msg?.data?.name === 'DrawUpdate') {
+          payload = JSON.parse(msg.data.data);
+        }
+
+        if (payload) handleUpdate(payload);
       } catch (e) { console.error('[Draw] WS parse error:', e, event.data); }
     };
   }

@@ -340,14 +340,20 @@
       try {
         const msg = JSON.parse(event.data);
         let payload = null;
-        // Wrapped format
-        if (msg?.data?.name === 'DrawUpdate') {
-          payload = JSON.parse(msg.data.data);
+
+        // Format 1: Streamer.bot broadcast envelope {event:{type:"Broadcast"}, data:{message:"..."}}
+        if (msg?.event?.type === 'Broadcast' && msg?.data?.message) {
+          payload = JSON.parse(msg.data.message);
         }
-        // Raw format fallback
-        else if (msg?.type && (msg.type === 'new_entry' || msg.type === 'full_sync' || msg.type === 'reset' || msg.type === 'winner_picked')) {
+        // Format 2: raw JSON {type:"..."}
+        else if (msg?.type) {
           payload = msg;
         }
+        // Format 3: old wrapped format
+        else if (msg?.data?.name === 'DrawUpdate') {
+          payload = JSON.parse(msg.data.data);
+        }
+
         if (!payload) return;
 
         if (payload.type === 'full_sync' || payload.type === 'new_entry') {
