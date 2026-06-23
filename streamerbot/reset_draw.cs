@@ -14,7 +14,7 @@ public class CPHInline
         CPH.SetGlobalVar("draw_winner_id",   "",    true);
 
         // Notify overlays
-        CPH.WebsocketCustomServerBroadcast("{\"type\":\"reset\"}", null, 8181);
+        CPH.WebsocketBroadcastString("{\"type\":\"reset\"}");
 
         CPH.LogInfo("[Draw] Draw has been reset.");
         return true;

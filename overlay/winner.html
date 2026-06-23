@@ -316,7 +316,7 @@
 </div>
 
 <script>
-  const WS_URL = 'ws://localhost:8181/';  // Custom WebSocket server in Streamer.bot
+  const WS_URL = 'ws://localhost:8080/';  // Streamer.bot built-in WebSocket server
   let allEntries = [];
   let ws = null;
   let rolling = false;
@@ -330,7 +330,7 @@
 
     ws.onopen = () => {
       setStatus(true);
-      ws.send(JSON.stringify({ type: 'sync_request' }));
+      // No subscription needed — we listen for raw broadcast messages
     };
 
     ws.onclose = () => { setStatus(false); setTimeout(connect, 3000); };

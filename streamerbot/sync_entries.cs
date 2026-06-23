@@ -1,7 +1,6 @@
 // Streamer.bot Action: "Draw - Sync Entries"
 // Triggers:
-//   1. WebSocket Server > Message — fires when overlay sends {"type":"sync_request"}
-//      (Set trigger criteria: message contains "sync_request")
+//   1. WebSocket Server > Client Connected — auto-syncs whenever an overlay connects
 //   2. Hotkey — e.g. Ctrl+Shift+S for manual sync
 
 using System.Collections.Generic;
@@ -23,7 +22,7 @@ public class CPHInline
             totalEntries = entries.Count
         };
 
-        CPH.WebsocketCustomServerBroadcast(JsonConvert.SerializeObject(payload), null, 8181);
+        CPH.WebsocketBroadcastString(JsonConvert.SerializeObject(payload));
         CPH.LogInfo($"[Draw] Synced {entries.Count} entries to overlays.");
         return true;
     }

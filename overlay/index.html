@@ -337,7 +337,7 @@
 
 <script>
   const MAX_VISIBLE = 8;
-  const WS_URL = 'ws://localhost:8181/';  // Custom WebSocket server in Streamer.bot
+  const WS_URL = 'ws://localhost:8080/';  // Streamer.bot built-in WebSocket server
 
   let entries = [];
   let totalCount = 0;
@@ -348,8 +348,7 @@
 
     ws.onopen = () => {
       setStatus(true);
-      // Request a full sync so the overlay catches up after a reconnect
-      ws.send(JSON.stringify({ type: 'sync_request' }));
+      // No subscription needed — we listen for raw broadcast messages
     };
 
     ws.onclose = () => {

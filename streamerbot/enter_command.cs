@@ -64,7 +64,7 @@ public class CPHInline
             totalEntries = entries.Count
         };
         string broadcastJson = JsonConvert.SerializeObject(payload);
-        CPH.WebsocketCustomServerBroadcast(broadcastJson, null, 8181);
+        CPH.WebsocketBroadcastString(broadcastJson);
         CPH.LogInfo($"[Draw] Broadcast: {broadcastJson}");
 
         CPH.SendYouTubeMessage(
