@@ -5,92 +5,86 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Race Draw Overlay</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
     background: transparent;
-    font-family: 'Segoe UI', Arial, sans-serif;
-    width: 420px;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    width: 300px;
     overflow: hidden;
   }
 
   .widget {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 12px;
+    gap: 6px;
+    padding: 10px;
   }
 
   /* ── Header ── */
   .header {
-    background: linear-gradient(135deg, #0d0d0d 0%, #1a1a2e 100%);
-    border: 1px solid #e8000d;
+    background: rgba(10, 10, 10, 0.92);
     border-radius: 10px;
-    padding: 12px 16px;
+    padding: 10px 14px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    box-shadow: 0 0 20px rgba(232, 0, 13, 0.3);
-  }
-
-  .header-left {
-    display: flex;
-    flex-direction: column;
   }
 
   .header-title {
     color: #fff;
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 2.5px;
     line-height: 1;
   }
 
   .header-subtitle {
-    color: #e8000d;
-    font-size: 10px;
+    color: #ffffff50;
+    font-size: 9px;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 1.5px;
     margin-top: 3px;
   }
 
   .entry-count-badge {
-    background: #e8000d;
+    background: rgba(255,255,255,0.08);
     color: #fff;
     border-radius: 8px;
-    padding: 6px 14px;
+    padding: 5px 12px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    min-width: 64px;
+    min-width: 52px;
   }
 
   .count-number {
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 900;
     line-height: 1;
   }
 
   .count-label {
-    font-size: 9px;
+    font-size: 8px;
     text-transform: uppercase;
     letter-spacing: 1px;
-    opacity: 0.85;
+    color: #ffffff60;
+    margin-top: 1px;
   }
 
-  /* ── Prize Info ── */
+  /* ── Prize Panel ── */
   .prize-panel {
-    background: linear-gradient(135deg, #0d0d0d 0%, #1a1a2e 100%);
-    border: 1px solid #333;
-    border-left: 3px solid #e8000d;
+    background: rgba(10, 10, 10, 0.92);
     border-radius: 10px;
     padding: 10px 14px;
   }
 
   .prize-title {
-    color: #e8000d;
-    font-size: 10px;
+    color: #ffffff40;
+    font-size: 8px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 2px;
@@ -98,137 +92,101 @@
   }
 
   .prize-item {
-    color: #ddd;
-    font-size: 12px;
+    color: #ccc;
+    font-size: 11px;
     display: flex;
     align-items: center;
     gap: 6px;
-    margin-bottom: 3px;
+    margin-bottom: 2px;
+    font-weight: 500;
   }
 
   .prize-item::before {
-    content: '🏆';
-    font-size: 11px;
+    content: '—';
+    color: #ffffff30;
+    font-size: 10px;
+  }
+
+  .divider {
+    height: 1px;
+    background: rgba(255,255,255,0.06);
+    margin: 8px 0;
   }
 
   .how-to-enter {
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid #222;
-    color: #aaa;
-    font-size: 11px;
+    color: #888;
+    font-size: 10px;
     display: flex;
     align-items: center;
     gap: 6px;
+    flex-wrap: wrap;
   }
 
   .cmd {
-    background: #e8000d;
+    background: rgba(255,255,255,0.12);
     color: #fff;
     padding: 2px 7px;
     border-radius: 4px;
     font-weight: 700;
-    font-size: 12px;
+    font-size: 10px;
     letter-spacing: 0.5px;
   }
 
   /* ── Entry Feed ── */
   .feed-header {
-    color: #777;
-    font-size: 10px;
+    color: #ffffff30;
+    font-size: 8px;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 2px;
-    padding: 0 4px;
+    padding: 2px 4px 0;
   }
 
   .entries-list {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
   }
 
   .entry-card {
-    background: linear-gradient(135deg, #0d0d0d 0%, #1a1a2e 100%);
-    border: 1px solid #222;
+    background: rgba(10, 10, 10, 0.92);
     border-radius: 8px;
-    padding: 8px 12px;
+    padding: 7px 10px;
     display: flex;
     align-items: center;
-    gap: 10px;
-    animation: slideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    gap: 9px;
+    animation: slideIn 0.35s cubic-bezier(0.34, 1.4, 0.64, 1) both;
     position: relative;
     overflow: hidden;
   }
 
-  .entry-card::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background: #e8000d;
-    border-radius: 3px 0 0 3px;
-  }
-
   .entry-card.new-entry {
-    border-color: #e8000d;
-    box-shadow: 0 0 12px rgba(232, 0, 13, 0.25);
+    background: rgba(255,255,255,0.06);
   }
 
-  .entry-card.new-entry::after {
-    content: 'NEW';
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: #e8000d;
-    color: #fff;
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    padding: 2px 5px;
-    border-radius: 3px;
-    animation: fadeOutNew 2s 1.5s forwards;
-  }
-
-  .avatar {
-    width: 36px;
-    height: 36px;
+  .avatar, .avatar-initials {
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
-    border: 2px solid #333;
     flex-shrink: 0;
     object-fit: cover;
-    background: #1a1a2e;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
+    background: rgba(255,255,255,0.06);
   }
 
   .avatar-initials {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 2px solid #333;
-    flex-shrink: 0;
-    background: #1a1a2e;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #e8000d;
-    font-size: 14px;
+    color: #888;
+    font-size: 11px;
     font-weight: 700;
   }
 
-  .entry-info {
-    flex: 1;
-    min-width: 0;
-  }
+  .entry-info { flex: 1; min-width: 0; }
 
   .entry-name {
-    color: #fff;
-    font-size: 14px;
+    color: #eee;
+    font-size: 12px;
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
@@ -236,72 +194,60 @@
   }
 
   .entry-time {
-    color: #555;
-    font-size: 10px;
+    color: #ffffff30;
+    font-size: 9px;
     margin-top: 1px;
   }
 
   .entry-number {
-    color: #444;
-    font-size: 11px;
+    color: #ffffff25;
+    font-size: 10px;
     font-weight: 700;
     flex-shrink: 0;
   }
 
   /* ── Status ── */
   .status-bar {
-    background: #0d0d0d;
-    border: 1px solid #1a1a1a;
-    border-radius: 6px;
-    padding: 6px 12px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+    padding: 2px 4px;
   }
 
   .status-dot {
-    width: 7px;
-    height: 7px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
     background: #22c55e;
     animation: pulse 2s infinite;
     flex-shrink: 0;
   }
 
-  .status-dot.disconnected {
-    background: #e8000d;
-    animation: none;
-  }
+  .status-dot.disconnected { background: #666; animation: none; }
 
   .status-text {
-    color: #555;
-    font-size: 10px;
+    color: #ffffff25;
+    font-size: 9px;
     text-transform: uppercase;
     letter-spacing: 1px;
   }
 
   @keyframes slideIn {
-    from { opacity: 0; transform: translateX(-20px); }
-    to   { opacity: 1; transform: translateX(0); }
-  }
-
-  @keyframes fadeOutNew {
-    from { opacity: 1; }
-    to   { opacity: 0; }
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
   @keyframes pulse {
     0%, 100% { opacity: 1; }
-    50%       { opacity: 0.4; }
+    50%       { opacity: 0.3; }
   }
 </style>
 </head>
 <body>
 <div class="widget">
 
-  <!-- Header -->
   <div class="header">
-    <div class="header-left">
+    <div>
       <div class="header-title">24H Race Draw</div>
       <div class="header-subtitle">Live Entries</div>
     </div>
@@ -311,26 +257,22 @@
     </div>
   </div>
 
-  <!-- Prize & How To Enter -->
   <div class="prize-panel">
     <div class="prize-title">Prizes</div>
     <div class="prize-item">10% SimLab Voucher</div>
     <div class="prize-item">SparksTheory Hoodie</div>
+    <div class="divider"></div>
     <div class="how-to-enter">
-      Type <span class="cmd">!enter</span> in chat to be entered into the draw!
+      Type <span class="cmd">!enter</span> in chat to join the draw
     </div>
   </div>
 
-  <!-- Recent entries -->
   <div class="feed-header">Recent Entries</div>
-  <div class="entries-list" id="entriesList">
-    <!-- populated by JS -->
-  </div>
+  <div class="entries-list" id="entriesList"></div>
 
-  <!-- Connection status -->
   <div class="status-bar">
     <div class="status-dot disconnected" id="statusDot"></div>
-    <div class="status-text" id="statusText">Connecting…</div>
+    <div class="status-text" id="statusText">Loading…</div>
   </div>
 
 </div>
